@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cosmic Zoom Engine</title>
+  <meta name="description" content="A luxury futuristic 3D digital observatory featuring all 88 IAU constellations, NASA exoplanet archive worlds with geological core slicing, and dynamic galactic particle systems with GSAP motion." />
+  <meta property="og:title" content="Cosmic Zoom Engine" />
+  <meta property="og:description" content="A luxury futuristic 3D digital observatory featuring all 88 IAU constellations, NASA exoplanet archive worlds with geological core slicing, and dynamic galactic particle systems with GSAP motion." />
+
+  <!-- Google Fonts: Cinzel Decorative for Astronomical Titles & Inter for Sleek UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Classic Three.js r128 & UnrealBloom Post-Processing CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/Pass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+  <!-- GSAP CDN for Silky High-Friction Inertia & 2.2s Camera Navigation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    :root {
+      --font-display: 'Cinzel Decorative', serif, Georgia;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace, Courier;
+      --cyan-neon: #00f0ff;
+      --violet-neon: #c084fc;
+      --gold-neon: #fbbf24;
+      --hud-bg: rgba(8, 14, 28, 0.55);
+      --hud-border: rgba(0, 240, 255, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      font-family: var(--font-ui);
+      color: #f1f5f9;
+    }
+
+    /* 100% Void-Black 3D Canvas */
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      display: block;
+      background-color: #000000;
+      cursor: grab;
+      outline: none;
+    }
+
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+
+    /* 1. FUTURISTIC HUD TOGGLE BAR */
+    #hud-bar {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 999px;
+      padding: 5px 8px;
+      box-shadow: 0 10px 36px rgba(0, 0, 0, 0.8), inset 0 0 16px rgba(0, 240, 255, 0.06);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hud-toggle {
+      background: transparent;
+      border: 1px solid transparent;
+      outline: none;
+      color: #94a3b8;
+      font-family: var(--font-ui);
+      font-size: 0.70rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 7px 15px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .hud-toggle:hover {
+      color: #e0f2fe;
+      background: rgba(0, 240, 255, 0.10);
+      border-color: rgba(0, 240, 255, 0.35);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+    }
+
+    .hud-toggle.active {
+      color: #ffffff;
+      background: rgba(0, 240, 255, 0.16);
+      border-color: rgba(0, 240, 255, 0.55);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.55);
+    }
+
+    .hud-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(0, 240, 255, 0.2);
+    }
+
+    /* Glowing Status LED indicator dots */
+    .hud-led {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      transition: all 0.25s ease;
+    }
+
+    .hud-led.cyan {
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+    }
+
+    .hud-led.violet {
+      background: #c084fc;
+      box-shadow: 0 0 8px #c084fc;
+    }
+
+    .hud-led.gold {
+      background: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+    }
+
+    .hud-led.muted {
+      background: #64748b;
+      box-shadow: none;
+    }
+
+    /* Mini nav button for catalog browsing */
+    .hud-nav-btn {
+      padding: 7px 10px;
+      font-size: 0.72rem;
+    }
+
+    /* 2. HOLOGRAPHIC SCI-FI TELEMETRY PANEL (Beside Animation on the Right) */
+    #telemetry-panel {
+      position: fixed;
+      top: 76px;
+      right: 22px;
+      width: 320px;
+      max-width: calc(100vw - 44px);
+      max-height: calc(100vh - 100px);
+      z-index: 40;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(8, 14, 28, 0.65);
+      border: 1px solid rgba(0, 240, 255, 0.22);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.85), inset 0 0 20px rgba(0, 240, 255, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(18px);
+      transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #telemetry-panel::-webkit-scrollbar {
+      width: 3px;
+    }
+    #telemetry-panel::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.25);
+      border-radius: 3px;
+    }
+
+    #telemetry-panel.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+
+    /* Header & Badge */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-badge {
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 4px;
+      padding: 2px 7px;
+    }
+
+    .panel-close-btn {
+      background: transparent;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 0.82rem;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .panel-close-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Title & Coordinates */
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.05em;
+      line-height: 1.25;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+    }
+
+    .panel-meta {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+    }
+
+    /* Live Audio Frequency Equalizer */
+    .audio-eq-wrap {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 240, 255, 0.14);
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .audio-eq-title {
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      color: #7dd3fc;
+      text-transform: uppercase;
+    }
+
+    .audio-eq-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 18px;
+    }
+
+    .eq-bar {
+      width: 3px;
+      min-height: 3px;
+      background: #00f0ff;
+      border-radius: 1px;
+      box-shadow: 0 0 5px rgba(0, 240, 255, 0.6);
+      transition: height 0.08s ease;
+    }
+
+    /* Interactive Visual Gauge / Spectral Bar */
+    .gauge-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(0, 240, 255, 0.14);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gauge-label-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.60rem;
+    }
+
+    .gauge-title {
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .gauge-value {
+      color: #00f0ff;
+      font-weight: 600;
+    }
+
+    .gauge-track {
+      position: relative;
+      width: 100%;
+      height: 7px;
+      border-radius: 4px;
+      background: linear-gradient(to right, #ff3311 0%, #ff8822 25%, #ffea44 50%, #ffffff 75%, #00f0ff 100%);
+      overflow: visible;
+    }
+
+    .gauge-pin {
+      position: absolute;
+      top: -3px;
+      left: 50%;
+      width: 4px;
+      height: 13px;
+      background: #ffffff;
+      border-radius: 2px;
+      box-shadow: 0 0 8px #00f0ff, 0 0 14px #ffffff;
+      transform: translateX(-50%);
+      transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 4-Tile Comparative Metric Grid */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .metric-cell {
+      background: rgba(0, 0, 0, 0.32);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 6px;
+      padding: 7px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-label {
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      color: #64748b;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric-val {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Lore / Scientific Narrative */
+    .panel-desc {
+      font-size: 0.70rem;
+      line-height: 1.48;
+      color: #cbd5e1;
+      font-weight: 300;
+      max-height: 80px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .panel-desc::-webkit-scrollbar {
+      width: 2px;
+    }
+    .panel-desc::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.2);
+    }
+
+    /* Action & Tour Controls */
+    .panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .action-btn-primary {
+      width: 100%;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #00f0ff;
+      font-family: var(--font-ui);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+      transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+      outline: none;
+    }
+
+    .action-btn-primary:hover {
+      background: rgba(0, 240, 255, 0.24);
+      border-color: #00f0ff;
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.6);
+      color: #ffffff;
+    }
+
+    .action-btn-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 6px #00f0ff;
+    }
+
+    .nav-actions-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn-sub {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      font-size: 0.60rem;
+      font-weight: 600;
+      padding: 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .action-btn-sub:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Responsive adjustments for mobile */
+    @media (max-width: 640px) {
+      #hud-bar {
+        top: 12px;
+        padding: 4px 6px;
+        gap: 3px;
+      }
+      .hud-toggle {
+        padding: 6px 10px;
+        font-size: 0.62rem;
+        letter-spacing: 0.08em;
+        gap: 5px;
+      }
+      #telemetry-panel {
+        top: auto;
+        bottom: 14px;
+        right: 14px;
+        left: 14px;
+        width: auto;
+        max-height: 48vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 100% Void-Black 3D Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Centered Floating Futuristic HUD Bar with Soundscape & Roam Controls -->
+  <header id="hud-bar" role="tablist" aria-label="Observatory Navigation">
+    <button id="toggle-stars" class="hud-toggle active" data-mode="stars" role="tab" aria-selected="true">
+      <span class="hud-led cyan"></span>
+      <span>[ STARS ]</span>
+    </button>
+    <div class="hud-divider"></div>
+    <button id="toggle-galaxies" class="hud-toggle" data-mode="galaxies" role="tab" aria-selected="false">
+      <span class="hud-led violet"></span>
+      <span>[ GALAXIES ]</span>
+    </button>
+    <div class="hud-divider"></div>
+    <button id="toggle-planets" class="hud-toggle" data-mode="planets" role="tab" aria-selected="false">
+      <span class="hud-led cyan"></span>
+      <span>[ PLANETS ]</span>
+    </button>
+    <div class="hud-divider"></div>
+
+    <!-- Ambient Soundscape Toggle / Cycle Button -->
+    <button id="toggle-audio" class="hud-toggle" role="button" title="Cycle Ambient Soundscape: Drift / Pulsar / Void / Off">
+      <span id="audio-led" class="hud-led cyan"></span>
+      <span id="audio-label">[ ♫ SOUND: DRIFT ]</span>
+    </button>
+    <div class="hud-divider"></div>
+
+    <!-- Free Roam Viewport Reset -->
+    <button id="btn-roam" class="hud-toggle" role="button" title="Free Roam View (Reset Camera to Wide Orbit)">
+      <span class="hud-led gold"></span>
+      <span>[ ✈ ROAM ]</span>
+    </button>
+
+    <!-- Prev / Next Portal Catalog Tour -->
+    <div class="hud-divider"></div>
+    <button id="btn-prev-target" class="hud-toggle hud-nav-btn" role="button" title="Previous Target (or Left Arrow)">◄</button>
+    <button id="btn-next-target" class="hud-toggle hud-nav-btn" role="button" title="Next Target (or Right Arrow)">►</button>
+  </header>
+
+  <!-- Holographic Telemetry & Interactive Visual Display (Beside 3D Animation on Right) -->
+  <aside id="telemetry-panel" aria-live="polite">
+    <div class="panel-header">
+      <span id="panel-badge" class="panel-badge">STELLAR SPECTRUM</span>
+      <button id="panel-close-btn" class="panel-close-btn" title="Dismiss overlay" aria-label="Close">✕</button>
+    </div>
+
+    <div>
+      <h2 id="panel-title" class="panel-title">Betelgeuse</h2>
+      <div id="panel-meta" class="panel-meta">α Orionis • M1-2Ia • 642 ly</div>
+    </div>
+
+    <!-- Live 5-Band Audio Frequency Equalizer -->
+    <div class="audio-eq-wrap">
+      <span class="audio-eq-title">LIVE HARMONIC FREQUENCY</span>
+      <div class="audio-eq-bars">
+        <div id="eq-0" class="eq-bar" style="height: 6px;"></div>
+        <div id="eq-1" class="eq-bar" style="height: 12px;"></div>
+        <div id="eq-2" class="eq-bar" style="height: 16px;"></div>
+        <div id="eq-3" class="eq-bar" style="height: 9px;"></div>
+        <div id="eq-4" class="eq-bar" style="height: 5px;"></div>
+      </div>
+    </div>
+
+    <!-- Interactive Visual Scientific Gauge -->
+    <div class="gauge-card">
+      <div class="gauge-label-wrap">
+        <span id="gauge-name" class="gauge-title">SPECTRAL TEMPERATURE</span>
+        <span id="gauge-val" class="gauge-value">3,600 K</span>
+      </div>
+      <div class="gauge-track">
+        <div id="gauge-pin" class="gauge-pin" style="left: 15%;"></div>
+      </div>
+    </div>
+
+    <!-- 4-Tile Comparative Metric Grid -->
+    <div class="metric-grid">
+      <div class="metric-cell">
+        <span id="label-m1" class="metric-label">STELLAR MASS</span>
+        <span id="val-m1" class="metric-val">16.5 M☉</span>
+      </div>
+      <div class="metric-cell">
+        <span id="label-m2" class="metric-label">RADIUS / SCALE</span>
+        <span id="val-m2" class="metric-val">764 R☉</span>
+      </div>
+      <div class="metric-cell">
+        <span id="label-m3" class="metric-label">DISTANCE</span>
+        <span id="val-m3" class="metric-val">642 ly</span>
+      </div>
+      <div class="metric-cell">
+        <span id="label-m4" class="metric-label">LUMINOSITY</span>
+        <span id="val-m4" class="metric-val">126,000 L☉</span>
+      </div>
+    </div>
+
+    <!-- Lore / Scientific Narrative -->
+    <p id="panel-desc" class="panel-desc">Click any glowing 3D star freely in space to focus and initiate dynamic constellation formation with neon vector laser tracing.</p>
+
+    <!-- Context Actions & Roam Navigation -->
+    <div class="panel-actions">
+      <button id="panel-action-btn" class="action-btn-primary">
+        <span class="action-btn-dot"></span>
+        <span id="panel-action-label">FORM CONSTELLATION</span>
+      </button>
+
+      <div class="nav-actions-row">
+        <button id="panel-prev-btn" class="action-btn-sub">◄ PREV TARGET</button>
+        <button id="panel-next-btn" class="action-btn-sub">NEXT TARGET ►</button>
+        <button id="panel-roam-btn" class="action-btn-sub">✈ ROAM</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modular Celestial Data & Engine Scripts -->
+  <script src="/src/data/constellationsData.js"></script>
+  <script src="/src/data/exoplanetsData.js"></script>
+  <script src="/src/data/galaxiesData.js"></script>
+  <script src="/src/engine/audioEngine.js"></script>
+  <script src="/src/engine/observatoryApp.js"></script>
+  <script src="/src/engine/uiController.js"></script>
+
+  <!-- Application Bootstrap -->
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      // 1. Initialize 3D Digital Observatory
+      window.observatoryApp = new ObservatoryEngine("canvas-container");
+
+      // 2. Initialize HUD & Telemetry Controller
+      window.observatoryUI = new ObservatoryUI(window.observatoryApp);
+
+      // 3. User interaction gesture to resume Web Audio API soundscape
+      const startAudio = () => {
+        if (window.soundEngine) {
+          window.soundEngine.startAmbient();
+        }
+        window.removeEventListener("pointerdown", startAudio);
+        window.removeEventListener("keydown", startAudio);
+      };
+      window.addEventListener("pointerdown", startAudio, { once: true });
+      window.addEventListener("keydown", startAudio, { once: true });
+    });
+  </script>
+</body>
+</html>

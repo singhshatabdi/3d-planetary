@@ -1,0 +1,6 @@
+{
+  "name": "Cosmic Zoom Engine",
+  "description": "A luxury 3D digital observatory featuring all 88 IAU constellations, NASA exoplanet archive worlds with geological core slicing, and dynamic galactic particle systems with GSAP motion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
